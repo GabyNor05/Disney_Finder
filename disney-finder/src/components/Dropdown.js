@@ -7,26 +7,22 @@ import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 const OMDB_BASE = "https://www.omdbapi.com/";
 const OMDB_KEY = "8a711d9f"; // provided key
 
-const Dropdown = ({ setSelectedTitle }) => {
-    const [rawResults, setRawResults] = useState([]); // raw OMDb search results
-    const [selectedValue, setSelectedValue] = useState(""); // imdbID selected
-    const [searchTerm, setSearchTerm] = useState(""); // user input
+const Dropdown = ({ label, setSelectedTitle }) => {
+    const [rawResults, setRawResults] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const debounceRef = useRef(null);
+    const requestRef = useRef(0);
 
-    // Perform search
     const searchTitles = async (q) => {
-        if (!q || q.trim().length < 2) {
-            setRawResults([]);
-            setError(q.trim().length === 0 ? "" : "Type at least 2 characters");
-            return;
-        }
+        const requestId = ++requestRef.current;
         try {
             setLoading(true);
             setError("");
             const url = `${OMDB_BASE}?s=${encodeURIComponent(q)}&type=movie&apikey=${OMDB_KEY}`;
             const { data } = await axios.get(url);
+            if (requestId !== requestRef.current) return;
             if (data.Response === "True" && Array.isArray(data.Search)) {
                 setRawResults(data.Search);
             } else {
@@ -34,99 +30,108 @@ const Dropdown = ({ setSelectedTitle }) => {
                 setError(data.Error || "No results found");
             }
         } catch (e) {
+            if (requestId !== requestRef.current) return;
             console.error("OMDb search error:", e);
             setError("Failed to fetch titles");
             setRawResults([]);
         } finally {
-            setLoading(false);
+            if (requestId === requestRef.current) setLoading(false);
         }
     };
 
-    // Debounce search on query changes
     useEffect(() => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-            searchTitles(searchTerm);
-        }, 300); // Slightly faster debounce
+
+        const query = searchTerm.trim();
+        requestRef.current += 1;
+        setRawResults([]);
+
+        if (query.length < 2) {
+            setLoading(false);
+            setError(query.length === 1 ? "Type at least 2 characters" : "");
+            return undefined;
+        }
+
+        setLoading(true);
+        setError("");
+        debounceRef.current = setTimeout(() => searchTitles(query), 300);
         return () => clearTimeout(debounceRef.current);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchTerm]);
 
-    // When a title is selected, fetch full details by imdbID
-    const handleTitleClick = async (event) => {
-        const imdbID = event.target.value;
-        setSelectedValue(imdbID);
-        if (!imdbID) return;
+    const handleTitleClick = async (title) => {
+        const requestId = ++requestRef.current;
         try {
             setLoading(true);
             setError("");
-            const url = `${OMDB_BASE}?i=${encodeURIComponent(imdbID)}&plot=short&apikey=${OMDB_KEY}`;
+            const url = `${OMDB_BASE}?i=${encodeURIComponent(title.imdbID)}&plot=short&apikey=${OMDB_KEY}`;
             const { data } = await axios.get(url);
+            if (requestId !== requestRef.current) return;
             if (data && data.Response !== "False") {
                 setSelectedTitle(data);
-                console.log(`Selected Title: ${data.Title} (${data.imdbID})`);
+                setSearchTerm("");
+                setRawResults([]);
             } else {
                 setError(data?.Error || "Could not load title details");
             }
         } catch (e) {
+            if (requestId !== requestRef.current) return;
             console.error("OMDb details error:", e);
             setError("Failed to fetch title details");
         } finally {
-            setLoading(false);
+            if (requestId === requestRef.current) setLoading(false);
         }
     };
 
-    // Normalization + sorting similar to StudentFiles pattern
     const normalize = (v) => String(v || '').toLowerCase();
     const collator = useMemo(() => new Intl.Collator(undefined, { sensitivity: 'base' }), []);
 
-    // Filter raw results again locally (extra safety if API returns broader matches)
     const filtered = useMemo(() => {
         let list = Array.isArray(rawResults) ? [...rawResults] : [];
         if (searchTerm.trim().length >= 2) {
             const q = normalize(searchTerm);
             list = list.filter(r => normalize(r.Title).includes(q));
         }
-        // Sort by Title ascending for stable UX
         list.sort((a, b) => collator.compare(a.Title || '', b.Title || ''));
         return list;
     }, [rawResults, searchTerm, collator]);
 
     return (
-        <div className="w-[400px] mt-4">
-            <div className="search-bar flex items-center cursor-text">
-                    <MagnifyingGlassIcon className="inline text-[#19BACC]" size={24} weight="light" />
-                    <input
-                        className="w-full h-full pl-2 bg-transparent text-white placeholder-white/70 outline-none"
-                        placeholder="Search titles (e.g., Moana)"
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
+        <div className="title-picker">
+            <div className="search-bar flex items-center">
+                <MagnifyingGlassIcon className="inline text-[#19BACC]" size={24} weight="light" />
+                <input
+                    type="search"
+                    aria-label={label}
+                    className="w-full h-full pl-2 bg-transparent text-white placeholder-white/70 outline-none"
+                    placeholder="Search titles (e.g., Moana)"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                />
             </div>
-
-            <select
-                id="titles-dropdown"
-                onChange={handleTitleClick}
-                value={selectedValue}
-                className="w-full px-4"
-                style={{
-                    borderRadius: "5px",
-                    fontSize: "16px",
-                    margin: "10px 0",
-                    color: selectedValue === "" ? "gray" : "white",
-                }}
-            >
-                <option value="" enabled>
-                    {loading ? `Searching "${searchTerm}"...` : (searchTerm.length < 2 ? "Type at least 2 characters" : filtered.length ? `Results (${filtered.length})` : (error || "No results"))}
-                </option>
-                {filtered.map(title => (
-                    <option key={title.imdbID} value={title.imdbID}>
-                        {title.Title} {title.Year ? `(${title.Year})` : ''}
-                    </option>
-                ))}
-            </select>
-
-            
+            {searchTerm.trim().length > 0 && (
+                <div className="title-search-results" aria-live="polite">
+                    {loading ? (
+                        <p className="title-search-status">Searching titles...</p>
+                    ) : error ? (
+                        <p className="title-search-status">{error}</p>
+                    ) : filtered.length > 0 ? (
+                        filtered.map(title => (
+                            <button
+                                className="title-search-option"
+                                key={title.imdbID}
+                                type="button"
+                                onClick={() => handleTitleClick(title)}
+                            >
+                                {title.Title} {title.Year ? `(${title.Year})` : ""}
+                            </button>
+                        ))
+                    ) : searchTerm.trim().length >= 2 ? (
+                        <p className="title-search-status">No titles found.</p>
+                    ) : (
+                        <p className="title-search-status">Type at least 2 characters.</p>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

@@ -21,6 +21,57 @@
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition for hover effect */
   }
+
+  .title-picker {
+    width: 100%;
+    margin: 10px 0 16px;
+    text-align: left;
+  }
+
+  .search-bar:focus-within {
+    outline: 1px solid #19bacc;
+  }
+
+  .search-bar input {
+    min-width: 0;
+    border: 0;
+  }
+
+  .title-search-results {
+    display: grid;
+    gap: 2px;
+    max-height: 190px;
+    overflow-y: auto;
+    margin-top: 6px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    background: rgba(0, 24, 46, 0.96);
+  }
+
+  .title-search-option {
+    width: 150px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: white;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .title-search-option:hover,
+  .title-search-option:focus-visible {
+    outline: none;
+    background: rgba(25, 186, 204, 0.2);
+  }
+
+  .title-search-status {
+    margin: 0;
+    padding: 8px 10px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+  }
   
   /* Style only the default option */
   #titles-dropdown option:disabled {
