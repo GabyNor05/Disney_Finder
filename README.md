@@ -51,6 +51,10 @@ npm install
 npm start
 ```
 
+## Deploy to GitHub Pages
+
+The GitHub Actions workflow builds the React app in `disney-finder/` and deploys its `build/` output. In the repository settings, open **Pages** and set the build and deployment source to **GitHub Actions**. Push to `deploy` or `main` to publish; the workflow can also be started manually from the Actions tab.
+
 ---
 
 # 💡 Key Features

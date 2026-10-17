@@ -2,12 +2,10 @@ import React from "react";
 import tigerLily from "../assests/Tigerlily.png";
 import tinkerbell from "../assests/Tinkerbell.png";
 import Characters from "./Characters";
-import { useState } from "react";
 import Card from "./ComparisonCard";
 import "../css/comparison.css";
 
 function Comparison() {
-    const [selectedTitle, setSelectedTitle] = useState(null);
     return (
         <div className="Comparison-page">
             <div className="comparison-container">

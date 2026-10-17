@@ -2,6 +2,7 @@
   "name": "disney-finder",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://gabynor05.github.io/Disney_Finder",
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
     "@testing-library/dom": "^10.4.0",
